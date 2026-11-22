@@ -1,126 +1,241 @@
-CREATE TABLE public.pessoa
-(
-    idp SERIAL,
-    nome VARCHAR(50) NOT NULL,
-    cpf CHAR(12) NOT NULL,
-    sexo CHAR(1),
-    nascimento DATE,
-    salario NUMERIC(10,2),
+-- ============================================================================
+-- UNIVERSIDADE FEDERAL DO CEARÁ (UFC) - CAMPUS QUIXADÁ
+-- DISCIPLINA: Fundamentos de Bancos de Dados (Etapa 2 - Projeto e Implementação)
+-- PROJETO: Sistema de Acompanhamento de Obras Públicas (Equipe T01)
+-- SCRIPT 01: Criação das estruturas do banco de dados, restrições e triggers
+-- ============================================================================
 
-    CONSTRAINT pessoa_pkey PRIMARY KEY (cpf),
-    CONSTRAINT id_unique UNIQUE (idp),
-    CONSTRAINT sexo_valido CHECK (sexo IN ('M','F')),
-    CONSTRAINT salario_positivo CHECK (salario >= 0)
+DROP TABLE IF EXISTS apontamento_cidadao CASCADE;
+DROP TABLE IF EXISTS documento_evidencia CASCADE;
+DROP TABLE IF EXISTS atualizacao_execucao CASCADE;
+DROP TABLE IF EXISTS aditivo_financeiro CASCADE;
+DROP TABLE IF EXISTS fase_medicao CASCADE;
+DROP TABLE IF EXISTS contrato CASCADE;
+DROP TABLE IF EXISTS obra CASCADE;
+DROP TABLE IF EXISTS empresa CASCADE;
+DROP TABLE IF EXISTS licitacao CASCADE;
+DROP TABLE IF EXISTS secretaria CASCADE;
+
+-- 1. SECRETARIA (RF11)
+CREATE TABLE secretaria (
+    id_secretaria SERIAL PRIMARY KEY,
+    nome_oficial VARCHAR(150) NOT NULL UNIQUE,
+    sigla VARCHAR(20)
 );
 
--- Genero e salario
-INSERT INTO public.pessoa (nome, cpf, sexo, nascimento, salario) VALUES
-('Ana Silva',        '900000000001', 'F', '1995-03-10', 3500.00),
-('João Santos',      '900000000002', 'M', '1990-08-22', 4200.50),
-('Maria Lima',       '900000000003', 'F', '1988-12-05', 5100.75),
-('Carlos Rocha',     '900000000004', 'M', '1992-01-15', 3800.00),
-('Fernanda Alves',   '900000000005', 'F', '1997-07-19', 2900.90),
-('Pedro Costa',      '900000000006', 'M', '1985-05-03', 6200.00),
-('Juliana Pires',    '900000000007', 'F', '1999-11-30', 2700.40),
-('Lucas Martins',    '900000000008', 'M', '1993-04-12', 4100.00),
-('Patricia Gomes',   '900000000009', 'F', '1987-09-25', 5400.80),
-('Rafael Nogueira',  '900000000010', 'M', '1991-02-18', 4600.30),
+-- 2. LICITACAO (RF06, RN05)
+CREATE TABLE licitacao (
+    id_licitacao SERIAL PRIMARY KEY,
+    numero_licitacao VARCHAR(50) NOT NULL UNIQUE,
+    modalidade VARCHAR(60) NOT NULL,
+    data_abertura DATE NOT NULL,
+    situacao VARCHAR(40) NOT NULL CHECK (
+        situacao IN ('aberta', 'em julgamento', 'homologada', 'deserta', 'cancelada')
+    )
+);
 
-('Bruna Azevedo',    '900000000011', 'F', '1996-06-21', 3300.00),
-('Diego Farias',     '900000000012', 'M', '1989-10-09', 4800.20),
-('Camila Rangel',    '900000000013', 'F', '1994-04-01', 3900.00),
-('Thiago Moreira',   '900000000014', 'M', '1986-12-14', 6100.00),
-('Larissa Cunha',    '900000000015', 'F', '1998-08-27', 2600.00),
-('Eduardo Pacheco',  '900000000016', 'M', '1984-02-11', 7000.00),
-('Renata Barros',    '900000000017', 'F', '1992-05-30', 4100.50),
-('Felipe Torres',    '900000000018', 'M', '1990-09-03', 4500.00),
-('Vanessa Ribeiro',  '900000000019', 'F', '1987-07-16', 5300.90),
-('Gustavo Neves',    '900000000020', 'M', '1993-11-08', 3900.00),
+-- 3. EMPRESA (RF02, RN05)
+CREATE TABLE empresa (
+    id_empresa SERIAL PRIMARY KEY,
+    razao_social VARCHAR(150) NOT NULL,
+    cnpj VARCHAR(18) NOT NULL UNIQUE CHECK (
+        char_length(regexp_replace(cnpj, '\D', '', 'g')) = 14
+    ),
+    telefone VARCHAR(20),
+    email VARCHAR(120)
+);
 
-('Aline Batista',    '900000000021', 'F', '1996-01-19', 3200.00),
-('Marcos Teixeira',  '900000000022', 'M', '1988-03-25', 5200.00),
-('Paula Fonseca',    '900000000023', 'F', '1991-06-12', 4100.00),
-('Bruno Macedo',     '900000000024', 'M', '1985-04-02', 6000.00),
-('Tatiane Lopes',    '900000000025', 'F', '1999-09-14', 2500.00),
-('Leonardo Rios',    '900000000026', 'M', '1992-12-29', 4400.00),
-('Simone Guedes',    '900000000027', 'F', '1986-10-07', 5600.00),
-('Andre Freitas',    '900000000028', 'M', '1994-08-18', 3800.00),
-('Debora Moraes',    '900000000029', 'F', '1990-02-05', 4700.00),
-('Rodrigo Paiva',    '900000000030', 'M', '1987-05-23', 5900.00),
+-- 4. OBRA (RF01, RF08, RF09, RF14, RN06, RN07, RN08)
+CREATE TABLE obra (
+    id_obra SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    local_execucao VARCHAR(255) NOT NULL,
+    data_inicio DATE NOT NULL,
+    data_prevista_conclusao DATE NOT NULL,
+    orcamento_previsto NUMERIC(14, 2) NOT NULL CHECK (orcamento_previsto > 0),
+    situacao VARCHAR(30) NOT NULL DEFAULT 'planejada' CHECK (
+        situacao IN ('planejada', 'em andamento', 'suspensa', 'concluída', 'cancelada')
+    ),
+    id_secretaria INT NOT NULL REFERENCES secretaria(id_secretaria) ON DELETE RESTRICT,
+    id_licitacao INT NULL REFERENCES licitacao(id_licitacao) ON DELETE SET NULL,
+    CHECK (data_prevista_conclusao >= data_inicio)
+);
 
-('Natalia Queiroz',  '900000000031', 'F', '1995-07-11', 3400.00),
-('Vinicius Prado',   '900000000032', 'M', '1991-01-09', 4300.00),
-('Carolina Siqueira','900000000033', 'F', '1989-06-17', 5200.00),
-('Fabio Rezende',    '900000000034', 'M', '1984-09-28', 6800.00),
-('Bianca Tavares',   '900000000035', 'F', '1997-03-06', 3100.00),
-('Caio Lacerda',     '900000000036', 'M', '1993-10-15', 4000.00),
-('Luciana Peixoto',  '900000000037', 'F', '1988-12-01', 5500.00),
-('Renan Duarte',     '900000000038', 'M', '1996-04-22', 3600.00),
-('Monica Vianna',    '900000000039', 'F', '1985-11-09', 6100.00),
-('Igor Sampaio',     '900000000040', 'M', '1992-02-27', 4500.00),
+-- 5. CONTRATO (RF07, RF15, RN02, RN05, RN06)
+CREATE TABLE contrato (
+    id_contrato SERIAL PRIMARY KEY,
+    numero_contrato VARCHAR(50) NOT NULL UNIQUE,
+    data_assinatura DATE NOT NULL,
+    prazo_vigencia_dias INT NOT NULL CHECK (prazo_vigencia_dias > 0),
+    valor_contratado NUMERIC(14, 2) NOT NULL CHECK (valor_contratado > 0),
+    id_obra INT NOT NULL REFERENCES obra(id_obra) ON DELETE CASCADE,
+    id_empresa INT NOT NULL REFERENCES empresa(id_empresa) ON DELETE RESTRICT
+);
 
-('Priscila Melo',    '900000000041', 'F', '1994-05-13', 3900.00),
-('Alexandre Pinto',  '900000000042', 'M', '1986-07-01', 5800.00),
-('Rita Carvalho',    '900000000043', 'F', '1990-08-19', 4700.00),
-('Daniel Moura',     '900000000044', 'M', '1989-03-08', 5100.00),
-('Sabrina Nunes',    '900000000045', 'F', '1998-10-30', 2800.00),
-('Henrique Sales',   '900000000046', 'M', '1991-12-16', 4400.00),
-('Elaine Portela',   '900000000047', 'F', '1987-01-26', 5600.00),
-('Mateus Braga',     '900000000048', 'M', '1995-09-04', 3700.00),
-('Cristina Amaral',  '900000000049', 'F', '1984-06-20', 6400.00),
-('Paulo Henriques',  '900000000050', 'M', '1988-11-11', 5200.00),
+-- 6. FASE_MEDICAO (RF03, RN01, RN03, RN06, RN07)
+CREATE TABLE fase_medicao (
+    id_fase SERIAL PRIMARY KEY,
+    nome_fase VARCHAR(120) NOT NULL,
+    data_medicao DATE NOT NULL,
+    percentual_conclusao NUMERIC(5, 2) NOT NULL CHECK (
+        percentual_conclusao >= 0 AND percentual_conclusao <= 100
+    ),
+    peso_fase NUMERIC(5, 2) NOT NULL DEFAULT 100.00 CHECK (
+        peso_fase > 0 AND peso_fase <= 100
+    ),
+    observacoes TEXT,
+    id_obra INT NOT NULL REFERENCES obra(id_obra) ON DELETE CASCADE
+);
 
-('Kelly Rocha',      '900000000051', 'F', '1996-02-14', 3300.00),
-('Samuel Antunes',   '900000000052', 'M', '1992-04-07', 4500.00),
-('Flavia Pimentel',  '900000000053', 'F', '1989-07-29', 5100.00),
-('Adriano Bittencourt','900000000054','M','1985-10-03',6200.00),
-('Milena Correa',    '900000000055', 'F', '1997-12-21', 3000.00),
-('Rogerio Cunha',    '900000000056', 'M', '1990-06-09', 4700.00),
-('Helena Godoy',     '900000000057', 'F', '1986-03-18', 5900.00),
-('Otavio Paredes',   '900000000058', 'M', '1994-08-01', 3900.00),
-('Lucio Brandao',    '900000000059', 'M', '1987-05-06', 5600.00),
-('Beatriz Rangel',   '900000000060', 'F', '1999-09-28', 2600.00),
+-- 7. ADITIVO_FINANCEIRO (RF04, RF15, RN04, RN06)
+CREATE TABLE aditivo_financeiro (
+    id_aditivo SERIAL PRIMARY KEY,
+    valor_aditivo NUMERIC(14, 2) NOT NULL CHECK (valor_aditivo > 0),
+    data_aditivo DATE NOT NULL DEFAULT CURRENT_DATE,
+    justificativa TEXT NOT NULL,
+    id_obra INT NOT NULL REFERENCES obra(id_obra) ON DELETE CASCADE
+);
 
-('Vitor Leal',       '900000000061', 'M', '1993-01-20', 4100.00),
-('Raquel Silveira',  '900000000062', 'F', '1991-11-13', 4600.00),
-('Danilo Furtado',   '900000000063', 'M', '1988-04-24', 5200.00),
-('Isabela Torres',   '900000000064', 'F', '1996-07-02', 3400.00),
-('Jonas Abreu',      '900000000065', 'M', '1985-02-17', 6300.00),
-('Cintia Pacheco',   '900000000066', 'F', '1992-06-05', 4300.00),
-('Wesley Monteiro',  '900000000067', 'M', '1990-09-19', 4800.00),
-('Daniela Salles',   '900000000068', 'F', '1989-12-08', 5100.00),
-('Murilo Afonso',    '900000000069', 'M', '1994-03-26', 4000.00),
-('Sueli Andrade',    '900000000070', 'F', '1986-10-14', 5800.00),
+-- 8. ATUALIZACAO_EXECUCAO (RF08, RF12, RF13, RF14, RN10)
+CREATE TABLE atualizacao_execucao (
+    id_atualizacao SERIAL PRIMARY KEY,
+    data_referencia DATE NOT NULL DEFAULT CURRENT_DATE,
+    tipo_registro VARCHAR(30) NOT NULL CHECK (
+        tipo_registro IN ('andamento', 'mudanca_situacao', 'alteracao_prazo')
+    ),
+    situacao_registrada VARCHAR(30) NULL CHECK (
+        situacao_registrada IN ('planejada', 'em andamento', 'suspensa', 'concluída', 'cancelada')
+    ),
+    nova_data_prevista DATE NULL,
+    descricao TEXT NOT NULL,
+    responsavel_registro VARCHAR(120) NOT NULL,
+    id_obra INT NOT NULL REFERENCES obra(id_obra) ON DELETE CASCADE
+);
 
-('Thiago Guimaraes', '900000000071', 'M', '1991-04-18', 4500.00),
-('Fabiana Coelho',   '900000000072', 'F', '1997-01-31', 3100.00),
-('Cristiano Lemos',  '900000000073', 'M', '1984-07-07', 6900.00),
-('Leticia Figueiredo','900000000074','F','1995-08-23',3600.00),
-('Renato Beltrao',   '900000000075', 'M', '1989-02-12', 5200.00),
-('Michele Franca',   '900000000076', 'F', '1993-06-29', 4000.00),
-('Allan Medeiros',   '900000000077', 'M', '1990-11-17', 4700.00),
-('Roberta Xavier',   '900000000078', 'F', '1987-09-03', 5500.00),
-('Bruno Esteves',    '900000000079', 'M', '1994-05-10', 4200.00),
-('Claudia Rezende',  '900000000080', 'F', '1985-12-26', 6000.00),
+-- 9. DOCUMENTO_EVIDENCIA (RF10, RN06)
+CREATE TABLE documento_evidencia (
+    id_documento SERIAL PRIMARY KEY,
+    descricao VARCHAR(255) NOT NULL,
+    data_documento DATE NOT NULL DEFAULT CURRENT_DATE,
+    localizacao_arquivo VARCHAR(500) NOT NULL,
+    id_obra INT NOT NULL REFERENCES obra(id_obra) ON DELETE CASCADE,
+    id_fase INT NULL REFERENCES fase_medicao(id_fase) ON DELETE SET NULL
+);
 
-('Igor Lima',        '900000000081', 'M', '1992-08-04', 4400.00),
-('Tatiana Lopes',    '900000000082', 'F', '1996-03-15', 3300.00),
-('Felipe Guedes',    '900000000083', 'M', '1988-06-28', 5300.00),
-('Renata Vilela',    '900000000084', 'F', '1991-10-06', 4600.00),
-('Douglas Neri',     '900000000085', 'M', '1986-01-22', 5800.00),
-('Julio Cesar Moraes','900000000086','M','1993-09-09',4100.00),
-('Patricia Abreu',   '900000000087', 'F', '1989-04-30', 5200.00),
-('Leonardo Cunha',   '900000000088', 'M', '1995-07-18', 3700.00),
-('Carla Pinheiro',   '900000000089', 'F', '1997-12-02', 3000.00),
-('Rodney Vieira',    '900000000090', 'M', '1984-11-21', 6700.00),
+-- 10. APONTAMENTO_CIDADAO (RF05, RN06, RN09)
+CREATE TABLE apontamento_cidadao (
+    id_apontamento SERIAL PRIMARY KEY,
+    descricao TEXT NOT NULL,
+    data_registro DATE NOT NULL DEFAULT CURRENT_DATE,
+    cpf_cidadao VARCHAR(14) NULL CHECK (
+        cpf_cidadao IS NULL OR char_length(regexp_replace(cpf_cidadao, '\D', '', 'g')) = 11
+    ),
+    id_obra INT NOT NULL REFERENCES obra(id_obra) ON DELETE CASCADE
+);
 
-('Elaine Matos',     '900000000091', 'F', '1990-05-08', 4800.00),
-('Victor Hugo Pires','900000000092', 'M', '1987-02-14', 5600.00),
-('Daniela Porto',    '900000000093', 'F', '1994-08-27', 3900.00),
-('Sandro Pecanha',   '900000000094', 'M', '1989-06-01', 5200.00),
-('Ariane Valente',   '900000000095', 'F', '1998-10-12', 2800.00),
-('Bruno Quevedo',    '900000000096', 'M', '1991-01-05', 4500.00),
-('Luciana Fontes',   '900000000097', 'F', '1986-03-24', 5900.00),
-('Ramon Brito',      '900000000098', 'M', '1993-04-16', 4100.00),
-('Elisa Montenegro', '900000000099', 'F', '1995-09-20', 3600.00),
-('Fabricio Dornelles','900000000100','M','1988-12-31',5400.00);
+-- ============================================================================
+-- TRIGGERS DE REGRAS DE NEGÓCIO (RN04 e RN07)
+-- ============================================================================
+
+-- RN04: Aditivo financeiro só pode ser registrado para obra 'em andamento'
+CREATE OR REPLACE FUNCTION fn_validar_aditivo_obra()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_situacao VARCHAR(30);
+BEGIN
+    SELECT situacao INTO v_situacao FROM obra WHERE id_obra = NEW.id_obra;
+    IF v_situacao <> 'em andamento' THEN
+        RAISE EXCEPTION 'RN04: Não é permitido registrar aditivo para obra com situação "%". A obra deve estar "em andamento".', v_situacao;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validar_aditivo_obra
+BEFORE INSERT ON aditivo_financeiro
+FOR EACH ROW EXECUTE FUNCTION fn_validar_aditivo_obra();
+
+-- RN07: Obra 'concluída' não deve receber novas medições de execução
+CREATE OR REPLACE FUNCTION fn_validar_medicao_obra_concluida()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_situacao VARCHAR(30);
+BEGIN
+    SELECT situacao INTO v_situacao FROM obra WHERE id_obra = NEW.id_obra;
+    IF v_situacao = 'concluída' THEN
+        RAISE EXCEPTION 'RN07: Obra já concluída não pode receber novas medições sem reabertura formal.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validar_medicao_obra_concluida
+BEFORE INSERT ON fase_medicao
+FOR EACH ROW EXECUTE FUNCTION fn_validar_medicao_obra_concluida();
+-- ============================================================================
+-- UNIVERSIDADE FEDERAL DO CEARÁ (UFC) - CAMPUS QUIXADÁ
+-- DISCIPLINA: Fundamentos de Bancos de Dados (Etapa 2 - Projeto e Implementação)
+-- PROJETO: Sistema de Acompanhamento de Obras Públicas (Equipe T01)
+-- SCRIPT 02: Povoamento inicial das tabelas (executar após 01_create_estruturas.sql)
+-- ============================================================================
+
+-- 1. Secretarias (RF11)
+INSERT INTO secretaria (nome_oficial, sigla) VALUES
+('Secretaria de Infraestrutura e Desenvolvimento Urbano', 'SEINFRA'),
+('Secretaria Municipal de Educação', 'SEDUC'),
+('Secretaria Municipal de Saúde', 'SESA');
+
+-- 2. Licitações (RF06)
+INSERT INTO licitacao (numero_licitacao, modalidade, data_abertura, situacao) VALUES
+('CP-001/2026', 'Concorrência Pública', '2026-01-15', 'homologada'),
+('PE-014/2026', 'Pregão Eletrônico', '2026-03-10', 'em julgamento'),
+('TP-005/2026', 'Tomada de Preços', '2025-11-20', 'homologada');
+
+-- 3. Empresas Contratadas (RF02)
+INSERT INTO empresa (razao_social, cnpj, telefone, email) VALUES
+('Construtora Sertão Forte Ltda', '12.345.678/0001-90', '(88) 99911-2233', 'contato@sertaoforte.com.br'),
+('Engenharia Vale Central S.A.', '98.765.432/0001-10', '(88) 99822-3344', 'licitacoes@valecentral.com.br'),
+('Pavimenta Ceará Obras Ltda', '45.678.912/0001-55', '(85) 3455-6677', 'engenharia@pavimentaceara.com.br');
+
+-- 4. Obras Públicas (RF01, RF14)
+-- Obs.: A Obra 3 entra inicialmente 'em andamento' para registrar suas fases concluídas e depois é encerrada.
+INSERT INTO obra (titulo, local_execucao, data_inicio, data_prevista_conclusao, orcamento_previsto, situacao, id_secretaria, id_licitacao) VALUES
+('Construção da Escola Municipal Tempo Integral', 'Bairro Campo Novo, Quixadá - CE', '2026-02-10', '2026-12-20', 2500000.00, 'em andamento', 2, 1),
+('Reforma e Ampliação da UBS Central', 'Centro, Ocara - CE', '2026-06-01', '2027-02-28', 850000.00, 'planejada', 3, 2),
+('Pavimentação Asfáltica da Avenida Principal', 'Distrito de Juatama, Quixadá - CE', '2025-12-05', '2026-08-30', 1400000.00, 'em andamento', 1, 3);
+
+-- 5. Contratos de Execução (RF07, RN02)
+INSERT INTO contrato (numero_contrato, data_assinatura, prazo_vigencia_dias, valor_contratado, id_obra, id_empresa) VALUES
+('CTR-010/2026', '2026-02-05', 320, 2420000.00, 1, 1),
+('CTR-022/2025', '2025-12-01', 270, 1380000.00, 3, 3);
+
+-- 6. Fases e Medições (RF03, RN01, RN03)
+INSERT INTO fase_medicao (nome_fase, data_medicao, percentual_conclusao, peso_fase, observacoes, id_obra) VALUES
+('Terraplanagem e Fundação', '2026-04-15', 100.00, 35.00, 'Fundação concluída dentro do cronograma.', 1),
+('Alvenaria e Cobertura', '2026-08-20', 70.00, 65.00, 'Estrutura metálica do telhado em montagem.', 1),
+('Drenagem e Base Asfáltica', '2026-05-10', 100.00, 50.00, 'Etapa aprovada pela fiscalização.', 3),
+('Pavimentação e Sinalização Viária', '2026-08-25', 100.00, 50.00, 'Obra entregue e sinalizada.', 3);
+
+-- Encerrando a Obra 3 após conclusão de todas as suas fases (RN07)
+UPDATE obra SET situacao = 'concluída' WHERE id_obra = 3;
+
+-- 7. Aditivos Financeiros (RF04, RN04 - apenas na Obra 1 que está 'em andamento')
+INSERT INTO aditivo_financeiro (valor_aditivo, data_aditivo, justificativa, id_obra) VALUES
+(175000.00, '2026-07-12', 'Reforço estrutural devido à sondagem complementar do solo.', 1);
+
+-- 8. Atualizações de Execução e Histórico (RF08, RF12, RF13, RF14, RN10)
+INSERT INTO atualizacao_execucao (data_referencia, tipo_registro, situacao_registrada, nova_data_prevista, descricao, responsavel_registro, id_obra) VALUES
+('2026-02-10', 'mudanca_situacao', 'em andamento', NULL, 'Ordem de serviço emitida e início do canteiro de obras.', 'Eng. Marcos Aurélio (SEDUC)', 1),
+('2026-07-15', 'alteracao_prazo', NULL, '2026-12-20', 'Ajuste de 20 dias no cronograma após aditivo de fundação.', 'Eng. Marcos Aurélio (SEDUC)', 1),
+('2026-08-25', 'mudanca_situacao', 'concluída', NULL, 'Termo de recebimento definitivo emitido.', 'Eng. Carla Mendes (SEINFRA)', 3);
+
+-- 9. Documentos e Evidências (RF10)
+INSERT INTO documento_evidencia (descricao, data_documento, localizacao_arquivo, id_obra, id_fase) VALUES
+('Projeto Arquitetônico Executivo (PDF)', '2026-02-01', 'https://transparencia.gov.br/docs/obra1_projeto.pdf', 1, NULL),
+('Relatório Fotográfico - 1ª Medição Fundação', '2026-04-16', 'https://transparencia.gov.br/docs/obra1_medicao1.pdf', 1, 1),
+('Termo de Entrega Definitiva da Pavimentação', '2026-08-26', 'https://transparencia.gov.br/docs/obra3_entrega.pdf', 3, 4);
+
+-- 10. Apontamentos de Cidadãos (RF05, RN09)
+INSERT INTO apontamento_cidadao (descricao, data_registro, cpf_cidadao, id_obra) VALUES
+('Placa de identificação da obra instalada corretamente na entrada do terreno.', '2026-03-02', '123.456.789-00', 1),
+('Excelente qualidade do asfalto e das faixas de pedestres após a conclusão.', '2026-09-01', NULL, 3);
